@@ -37,7 +37,7 @@ def resolve_data_path():
 
 DATA_PATH = resolve_data_path()
 
-st.set_page_config(page_title="老魏交付中心 · 八月数据看板",
+st.set_page_config(page_title="粤徽交付中心 · 八月数据看板",
                    page_icon="📊", layout="wide")
 
 # 深色主题微调
@@ -187,7 +187,7 @@ def heatmap_fig(df, metric):
 # 主流程
 # ---------------------------------------------------------------------------
 def 主分支():
-    st.title("📊 老魏交付中心 · 八月数据看板")
+    st.title("📊 粤徽交付中心 · 八月数据看板")
 
     # 侧边栏
     with st.sidebar:
