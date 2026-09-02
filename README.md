@@ -1,4 +1,4 @@
-# 📊 粤徽交付中心 · 八月数据看板
+# 📊 老魏交付中心 · 八月数据看板
 
 基于「粤徽交付中心八月数据看板.xlsx」构建的 Streamlit 可视化应用，展示 8 月每位员工的招聘数据。
 
@@ -42,7 +42,7 @@ git push -u origin main
 **2. 在 Streamlit Cloud 部署**
 
 1. 访问 https://share.streamlit.io 并用 GitHub 账号登录
-2. 点击 **New app** → 选择刚推送的仓库 → Branch 选 `main` → Main file 填 `app.py`
+2. 点击 **New app** → 选择刚推送的仓库 → Branch 选 `主分支` → Main file 填 `app.py`
 3. 点 **Deploy**，等待 1-2 分钟构建完成
 4. 部署成功后得到一个公网地址：`https://<你的应用名>.streamlit.app`，分享给任何人即可访问
 
