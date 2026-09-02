@@ -1,12 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-粤徽交付中心八月数据看板 — Streamlit 可视化应用
-数据源: 本机 D:/YueHuiProject/粤徽交付中心八月数据看板.xlsx（不存在时回退到仓库内同名文件，兼容云端部署）
-
-运行: streamlit run app.py
-部署: 推送到 GitHub 后在 Streamlit Community Cloud 一键部署
-"""
-
 import io
 import os
 
@@ -37,7 +29,7 @@ def resolve_data_path():
 
 DATA_PATH = resolve_data_path()
 
-st.set_page_config(page_title="粤徽交付中心 · 八月数据看板",
+st.set_page_config(page_title="老魏交付中心 · 八月数据看板",
                    page_icon="📊", layout="wide")
 
 # 深色主题微调
