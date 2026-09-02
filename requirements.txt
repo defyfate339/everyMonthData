@@ -1,0 +1,6 @@
+streamlit>=1.40
+pandas>=2.2
+plotly>=5.20
+python-calamine>=0.3
+openpyxl>=3.1
+matplotlib>=3.8
