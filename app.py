@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-粤徽交付中心八月数据看板 — Streamlit 可视化应用
-数据源: 本机 D:/YueHuiProject/粤徽交付中心八月数据看板.xlsx（不存在时回退到仓库内同名文件，兼容云端部署）
+九和交付中心九月数据看板 — Streamlit 可视化应用
+数据源: 本机 D:/YueHuiProject/九和九月数据看板.xlsx（不存在时回退到仓库内同名文件，兼容云端部署）
 
 运行: streamlit run app.py
 部署: 推送到 GitHub 后在 Streamlit Community Cloud 一键部署
 """
 
+import glob
 import io
 import os
 
@@ -17,8 +18,8 @@ import streamlit as st
 # ---------------------------------------------------------------------------
 # 常量与配置
 # ---------------------------------------------------------------------------
-LOCAL_PATH = r"D:/YueHuiProject/粤徽交付中心八月数据看板.xlsx"
-DATA_FILE = "粤徽交付中心八月数据看板.xlsx"  # 仓库内数据文件（云端部署用）
+LOCAL_PATH = r"D:/YueHuiProject/九和九月数据看板.xlsx"
+DATA_FILE = "九和九月数据看板.xlsx"  # 仓库内数据文件（云端部署用）
 METRICS = ["新增微信", "预约", "到场", "合格", "在职"]
 METRIC_COLORS = {"新增微信": "#4A90D9", "预约": "#9B59B6", "到场": "#F39C12",
                  "合格": "#27AE60", "在职": "#E74C3C"}
@@ -28,16 +29,21 @@ def resolve_data_path():
     """优先本机路径，其次仓库内数据文件（云端可用）"""
     if os.path.exists(LOCAL_PATH):
         return LOCAL_PATH
-    repo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), DATA_FILE)
+    here = os.path.dirname(os.path.abspath(__file__))
+    repo_path = os.path.join(here, DATA_FILE)
     if os.path.exists(repo_path):
         return repo_path
+    # 兜底：仓库内任意 *数据看板*.xlsx
+    cands = sorted(glob.glob(os.path.join(here, "*数据看板*.xlsx")))
+    if cands:
+        return cands[0]
     st.error(f"未找到数据文件（{LOCAL_PATH} 或仓库内 {DATA_FILE}）")
     st.stop()
 
 
 DATA_PATH = resolve_data_path()
 
-st.set_page_config(page_title="粤徽交付中心 · 八月数据看板",
+st.set_page_config(page_title="九和交付中心 · 九月数据看板",
                    page_icon="📊", layout="wide")
 
 # 深色主题微调
@@ -63,35 +69,47 @@ st.markdown("""
 def load_and_parse():
     df = pd.read_excel(DATA_PATH, sheet_name=0, engine="calamine", header=None)
 
-    # 1) 日期列定位: 第6行(row5)为日期、且第7行(row6)对应为指标名（每组5列起始）
-    #    —— 注意：row5 还有注释日期"（截至）2026-08-24"(col5)，
-    #       它后面不是指标名（是"数据汇总"），必须排除；真正的 8/1 从 N 列开始
     METRIC_SET = set(METRICS)
-    date_cols, dates = [], []
-    for c in range(df.shape[1]):
-        v = df.iloc[5, c]
-        if isinstance(v, (pd.Timestamp,)) or hasattr(v, "strftime"):
-            if str(df.iloc[6, c]).strip() in METRIC_SET:  # 二级表头必须是指标名
-                date_cols.append(c)
-                dates.append(pd.Timestamp(v))
-    if not date_cols:
-        st.error("未能在第 6 行找到日期标签，请确认文件结构（8月1日~8月31日 每组5列）")
-        st.stop()
 
-    # 2) 员工行定位: 姓名(col3)、岗位(col4) 均非空，且组别(col1) 非"合计"
-    #    （合计行 col3 为人数数字，如"12"，需排除）
     def _is_empty(v):
         return v is None or (isinstance(v, float) and pd.isna(v)) or str(v).strip() == ""
 
-    emp_rows = [r for r in range(7, df.shape[0])
+    # 1) 表头行自动定位：同一行同时出现 "姓名"(col3) 与 "岗位"(col4)
+    header_row = None
+    for r in range(min(20, df.shape[0])):
+        if str(df.iloc[r, 3]).strip() == "姓名" and str(df.iloc[r, 4]).strip() == "岗位":
+            header_row = r
+            break
+    if header_row is None:
+        st.error("未找到表头行（需同时包含「姓名」「岗位」列），请确认文件结构")
+        st.stop()
+    date_row = header_row - 1  # 日期标签在表头行的上一行
+
+    # 2) 日期列定位：日期行必须为日期，且表头行同列是指标名（每组5列）
+    #    日期行还有注释"（截至）2026-09-03"，其下方是"BOSS账号数量"，自动被排除
+    date_cols, dates = [], []
+    for c in range(df.shape[1]):
+        v = df.iloc[date_row, c]
+        if (isinstance(v, pd.Timestamp) or hasattr(v, "strftime")) \
+                and str(df.iloc[header_row, c]).strip() in METRIC_SET:
+            date_cols.append(c)
+            dates.append(pd.Timestamp(v))
+    if not date_cols:
+        st.error("未找到日期列（日期行下方的表头必须是 新增微信/预约/到场/合格/在职）")
+        st.stop()
+
+    # 3) 员工行定位：姓名、岗位均非空，且所属部门/组别不含"合计"（合计行 col3 为人数）
+    emp_rows = [r for r in range(header_row + 1, df.shape[0])
                 if not _is_empty(df.iloc[r, 3]) and str(df.iloc[r, 3]).strip() != "姓名"
                 and not _is_empty(df.iloc[r, 4])
-                and str(df.iloc[r, 1]).strip() != "合计"]
+                and "合计" not in f"{df.iloc[r, 0]}{df.iloc[r, 1]}"]
     if not emp_rows:
         st.error("未找到员工明细行")
         st.stop()
 
-    # 3) 主信息表（整月汇总 + 基础信息）
+    n = len(METRICS)
+
+    # 4) 主信息表（整月汇总 + 基础信息）
     main_records = []
     for r in emp_rows:
         main_records.append({
@@ -102,23 +120,22 @@ def load_and_parse():
             "岗位": df.iloc[r, 4],
             "BOSS账号数量": _num(df.iloc[r, 5]),
             **{m: _num(df.iloc[r, 6 + i]) for i, m in enumerate(METRICS)},
-            "目标在职": _num(df.iloc[r, 11]),
-            "达成率": df.iloc[r, 12] if pd.notna(df.iloc[r, 12]) else None,
+            "目标在职": _num(df.iloc[r, 6 + n]),
+            "达成率": df.iloc[r, 7 + n] if pd.notna(df.iloc[r, 7 + n]) else None,
         })
     main_df = pd.DataFrame(main_records)
 
-    # 4) 每日明细长表
+    # 5) 每日明细长表
     long_records = []
     for r in emp_rows:
         name = str(df.iloc[r, 3]).strip()
         for k, c0 in enumerate(date_cols):
             d = dates[k]
             for j, m in enumerate(METRICS):
-                v = df.iloc[r, c0 + j]
                 long_records.append({
                     "日期": d, "姓名": name,
                     "组别": df.iloc[r, 1], "管理": df.iloc[r, 2], "岗位": df.iloc[r, 4],
-                    "指标": m, "数值": _num(v),
+                    "指标": m, "数值": _num(df.iloc[r, c0 + j]),
                 })
     detail_df = pd.DataFrame(long_records)
 
@@ -187,7 +204,7 @@ def heatmap_fig(df, metric):
 # 主流程
 # ---------------------------------------------------------------------------
 def main():
-    st.title("📊 粤徽交付中心 · 八月数据看板")
+    st.title("📊 九和交付中心 · 九月数据看板")
 
     # 侧边栏
     with st.sidebar:
@@ -338,7 +355,7 @@ def main():
         with pd.ExcelWriter(buf, engine="openpyxl") as writer:
             pivot_out.to_excel(writer, index=False, sheet_name="区间汇总")
         st.download_button("📥 下载区间汇总 Excel", buf.getvalue(),
-                           file_name=f"粤徽看板_{d_start}_{d_end}.xlsx",
+                           file_name=f"九和看板_{d_start}_{d_end}.xlsx",
                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
